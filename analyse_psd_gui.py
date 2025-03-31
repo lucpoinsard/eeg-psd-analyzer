@@ -19,7 +19,7 @@ Fonctionnalités :
 
 Auteur : Luc Poinsard
 Date : Février 2025
-Version : 1.0
+Version : 1.1
 '''
 
 # ---------------------------------------------
@@ -76,6 +76,9 @@ def run_analysis():
     try:
         # --- Chargement du fichier EEG ---
         raw = mne.io.read_raw_eeglab(filepath.get(), preload=True)
+
+        # Conversion explicite du signal de Volts → microvolts
+        raw._data *= 1e6
 
         # --- Extraction des événements et étiquettes ---
         events, event_id = mne.events_from_annotations(raw)
