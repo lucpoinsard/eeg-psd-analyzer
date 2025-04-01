@@ -71,9 +71,48 @@ def suggest_output_filename():
 # ---------------------------------------------
 # Fonction principale d’analyse EEG
 # ---------------------------------------------
+def validate_band_ranges():
+    """Vérifie que les plages de fréquences sont valides et ne se chevauchent pas."""
+    bands_order = ['delta', 'theta', 'alpha', 'beta']
+    ranges = []
+
+    for b in bands_order:
+        try:
+            fmin = float(entries[b+"_min"].get())
+            fmax = float(entries[b+"_max"].get())
+        except ValueError:
+            messagebox.showerror("Erreur", f"Valeurs invalides pour la bande {b}.")
+            return False
+
+        # Vérifie que les valeurs sont dans la plage autorisée
+        if b == 'delta' and not (1 <= fmin < fmax <= 4):
+            messagebox.showerror("Erreur", "Bande delta doit être entre 1 et 4 Hz (min < max).")
+            return False
+        elif b == 'theta' and not (4 <= fmin < fmax <= 8):
+            messagebox.showerror("Erreur", "Bande theta doit être entre 4 et 8 Hz (min < max).")
+            return False
+        elif b == 'alpha' and not (8 <= fmin < fmax <= 13):
+            messagebox.showerror("Erreur", "Bande alpha doit être entre 8 et 13 Hz (min < max).")
+            return False
+        elif b == 'beta' and not (13 <= fmin < fmax <= 30):
+            messagebox.showerror("Erreur", "Bande beta doit être entre 13 et 30 Hz (min < max).")
+            return False
+
+        ranges.append((fmin, fmax))
+
+    # Vérifie que les bandes ne se chevauchent pas
+    for i in range(1, len(ranges)):
+        if ranges[i-1][1] > ranges[i][0]:
+            messagebox.showerror("Erreur", "Les bandes de fréquences se chevauchent ou sont mal ordonnées.")
+            return False
+
+    return True
 
 def run_analysis():
     try:
+        if not validate_band_ranges():
+            return  # Stoppe l'analyse si les plages sont invalides
+
         # --- Chargement du fichier EEG ---
         raw = mne.io.read_raw_eeglab(filepath.get(), preload=True)
 
@@ -155,6 +194,18 @@ def run_analysis():
 
         # --- Export CSV avec mention de l’unité ---
         df = pd.DataFrame(rows)
+
+        # --- Vérification de l’écrasement éventuel du fichier ---
+        output_file = savepath.get()
+        if os.path.exists(output_file):
+            overwrite = messagebox.askyesno(
+                "Fichier existant",
+                f"Le fichier '{os.path.basename(output_file)}' existe déjà.\nVoulez-vous l’écraser ?"
+            )
+            if not overwrite:
+                return
+
+        # --- Sauvegarde dans le fichier CSV ---
         try:
             with open(savepath.get(), "w", newline="") as f:
                 f.write("# Unité des puissances : µV²\n")
