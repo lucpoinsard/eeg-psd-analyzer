@@ -162,14 +162,15 @@ def run_analysis():
         # --- Association des événements par nom à chaque epoch ---
         event_times = events[:, 0] / raw.info['sfreq']
         epoch_times = epochs.events[:, 0] / raw.info['sfreq']
-        event_labels = []
-        for t in epoch_times:
-            label = ''
-            for e_time, e_id in zip(event_times, events[:, 2]):
-                if abs(t - e_time) < duration / 2:
-                    label = event_code_to_label.get(e_id, str(e_id))
-                    break
-            event_labels.append(label)
+
+        # Initialisation de tous les labels à vide
+        event_labels = ['' for _ in epoch_times]
+
+        # Pour chaque event, trouver l'epoch la plus proche
+        for e_time, e_id in zip(event_times, events[:, 2]):
+            idx_closest = np.argmin(np.abs(epoch_times - e_time))
+            label = event_code_to_label.get(e_id, str(e_id))
+            event_labels[idx_closest] = label
 
         # --- Construction des lignes de résultats ---
         rows = []
